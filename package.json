@@ -1,0 +1,17 @@
+{
+  "name": "pi-comm",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "workspaces": ["packages/*", "apps/*"],
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b --pretty"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0",
+    "@types/node": "^20.16.0"
+  }
+}
