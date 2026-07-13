@@ -1,0 +1,10 @@
+{
+  "name": "@pi-comm/relay",
+  "version": "0.0.0",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "bin": { "pi-comm-relay": "src/index.ts" },
+  "scripts": { "start": "node --experimental-strip-types src/index.ts" },
+  "dependencies": { "@pi-comm/a2a-contract": "*", "ws": "^8.18.0" },
+  "devDependencies": { "@types/ws": "^8.5.12" }
+}
