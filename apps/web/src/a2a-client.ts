@@ -27,6 +27,7 @@ export class A2AClient {
       headers: { ...this.auth(), "content-type": "application/json" },
       body: JSON.stringify({ message: { messageId: crypto.randomUUID(), role: "ROLE_USER", parts: [{ text }] } }),
     });
+    if (!res.ok) throw new Error(`stream HTTP ${res.status}`);
     if (!res.body) throw new Error("no stream body");
     const reader = res.body.getReader();
     const decoder = new TextDecoder();

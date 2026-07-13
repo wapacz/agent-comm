@@ -18,4 +18,27 @@ describe("A2AClient", () => {
     const c = new A2AClient({ baseUrl: "http://r", token: "t" });
     expect(await c.send("a", "q")).toBe("hi there");
   });
+
+  it("parses SSE deltas and stops at [DONE]", async () => {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        const enc = new TextEncoder();
+        controller.enqueue(enc.encode('data: {"message":{"parts":[{"text":"Hel"}]}}\n\n'));
+        controller.enqueue(enc.encode('data: {"message":{"parts":[{"text":"lo"}]}}\n\n'));
+        controller.enqueue(enc.encode('data: [DONE]\n\n'));
+        controller.close();
+      },
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, body }));
+    const c = new A2AClient({ baseUrl: "http://r", token: "t" });
+    const deltas: string[] = [];
+    await c.stream("a", "hi", (t) => deltas.push(t));
+    expect(deltas).toEqual(["Hel", "lo"]);
+  });
+
+  it("stream() throws on HTTP error", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503 }));
+    const c = new A2AClient({ baseUrl: "http://r", token: "t" });
+    await expect(c.stream("a", "hi", () => {})).rejects.toThrow("stream HTTP 503");
+  });
 });
