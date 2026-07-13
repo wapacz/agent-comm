@@ -18,9 +18,10 @@ export function startTunnelServer(
       try { frame = parseTunnelFrame(raw.toString()); }
       catch { ws.close(1002, "bad frame"); return; }
 
-      if (frame.type === "ping") { ws.send(encodeFrame({ type: "pong" })); return; }
+      if (frame.type === "ping") { try { ws.send(encodeFrame({ type: "pong" })); } catch { /* socket closed */ } return; }
 
       if (frame.type === "register") {
+        if (tenant !== null) { ws.close(1008, "already registered"); return; }
         if (frame.token !== token) { ws.close(1008, "unauthorized"); return; }
         let card;
         try { card = validateAgentCard(frame.card); } catch { ws.close(1002, "bad card"); return; }
@@ -28,7 +29,7 @@ export function startTunnelServer(
           card,
           send: (f) => { try { ws.send(encodeFrame(f)); } catch { /* dropped */ } },
         });
-        ws.send(encodeFrame({ type: "registered", tenant }));
+        try { ws.send(encodeFrame({ type: "registered", tenant })); } catch { /* socket closed */ }
         return;
       }
 
