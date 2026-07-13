@@ -31,21 +31,26 @@ export class PendingRequests {
     return new Promise((resolve, reject) => this.finalResolvers.set(reqId, { resolve, reject }));
   }
 
-  async *iterate(reqId: string): AsyncGenerator<{ message: Message; final: boolean }> {
+  openStream(reqId: string): AsyncGenerator<{ message: Message; final: boolean }> {
     const queue: Array<{ message: Message; final: boolean } | { error: string }> = [];
     let notify: (() => void) | null = null;
+    // Register the sink SYNCHRONOUSLY so pushes from conn.send() are never dropped.
     this.streamSinks.set(reqId, (v) => { queue.push(v); notify?.(); });
-    try {
-      while (true) {
-        if (queue.length === 0) await new Promise<void>((r) => (notify = r));
-        while (queue.length) {
-          const v = queue.shift()!;
-          if ("error" in v) throw new Error(v.error);
-          yield v;
-          if (v.final) return;
+    const self = this;
+    async function* gen() {
+      try {
+        while (true) {
+          if (queue.length === 0) await new Promise<void>((r) => (notify = r));
+          while (queue.length) {
+            const v = queue.shift()!;
+            if ("error" in v) throw new Error(v.error);
+            yield v;
+            if (v.final) return;
+          }
         }
-      }
-    } finally { this.streamSinks.delete(reqId); }
+      } finally { self.streamSinks.delete(reqId); }
+    }
+    return gen();
   }
 }
 
@@ -109,9 +114,10 @@ export function createHttpHandler(registry: AgentRegistry, pending: PendingReque
       catch (e) { return send(res, 400, { error: (e as Error).message }); }
       res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache", connection: "keep-alive" });
       const reqId = randomUUID();
+      const stream = pending.openStream(reqId); // register sink BEFORE dispatching
       conn.send({ type: "request", reqId, stream: true, message });
       try {
-        for await (const { message: m } of pending.iterate(reqId)) {
+        for await (const { message: m } of stream) {
           res.write(`data: ${JSON.stringify({ message: m })}\n\n`);
         }
       } catch (e) {

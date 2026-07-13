@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { AgentRegistry } from "../src/registry.ts";
 import { PendingRequests, createHttpHandler, checkBearer } from "../src/http-surface.ts";
 import { createServer, type Server } from "node:http";
@@ -31,6 +31,10 @@ beforeEach(async () => {
   await new Promise<void>((r) => server.listen(0, r));
   const addr = server.address();
   base = `http://127.0.0.1:${typeof addr === "object" && addr ? addr.port : 0}`;
+});
+
+afterEach(async () => {
+  await new Promise<void>((r) => server.close(() => r()));
 });
 
 describe("checkBearer", () => {
@@ -76,5 +80,58 @@ describe("http surface", () => {
       body: JSON.stringify({ message: { messageId: "m1", role: "ROLE_USER", parts: [{ text: "ping" }] } }),
     });
     expect(res.status).toBe(404);
+  });
+});
+
+describe("message:stream", () => {
+  it("streams multiple chunks then [DONE]", async () => {
+    // Register a streaming agent that pushes two non-final chunks then a final one.
+    registry.register("streamer", card, {
+      card,
+      send: (f) => {
+        if (f.type === "request") {
+          pending.push(f.reqId, { messageId: "r1", role: "ROLE_AGENT", parts: [{ text: "chunk1" }] }, false);
+          pending.push(f.reqId, { messageId: "r2", role: "ROLE_AGENT", parts: [{ text: "chunk2" }] }, false);
+          pending.push(f.reqId, { messageId: "r3", role: "ROLE_AGENT", parts: [{ text: "final" }] }, true);
+        }
+      },
+    });
+    const res = await fetch(`${base}/agents/streamer/message:stream`, {
+      method: "POST",
+      headers: { authorization: "Bearer secret", "content-type": "application/json" },
+      body: JSON.stringify({ message: { messageId: "m2", role: "ROLE_USER", parts: [{ text: "go" }] } }),
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/event-stream");
+    const text = await res.text();
+    expect(text).toContain('"chunk1"');
+    expect(text).toContain('"chunk2"');
+    expect(text).toContain('"final"');
+    expect(text).toContain("data: [DONE]");
+    // Every chunk line must be a valid SSE data frame.
+    const dataLines = text.split("\n").filter((l) => l.startsWith("data: ") && l !== "data: [DONE]");
+    expect(dataLines).toHaveLength(3);
+    for (const line of dataLines) {
+      const payload = JSON.parse(line.slice("data: ".length)) as { message: unknown };
+      expect(payload).toHaveProperty("message");
+    }
+  });
+
+  it("404s for an unknown tenant on message:stream", async () => {
+    const res = await fetch(`${base}/agents/ghost/message:stream`, {
+      method: "POST",
+      headers: { authorization: "Bearer secret", "content-type": "application/json" },
+      body: JSON.stringify({ message: { messageId: "m3", role: "ROLE_USER", parts: [{ text: "ping" }] } }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("400s for invalid message body on message:stream", async () => {
+    const res = await fetch(`${base}/agents/backend/message:stream`, {
+      method: "POST",
+      headers: { authorization: "Bearer secret", "content-type": "application/json" },
+      body: JSON.stringify({ message: { bad: "data" } }),
+    });
+    expect(res.status).toBe(400);
   });
 });
