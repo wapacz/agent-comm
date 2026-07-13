@@ -19,6 +19,7 @@ export function registerA2ATools(
       const res = await fetch(`${cfg.relayHttpUrl}/agents`, {
         headers: { authorization: `Bearer ${cfg.token}` },
       });
+      if (!res.ok) throw new Error(`a2a_list failed: HTTP ${res.status}`);
       const body = (await res.json()) as {
         agents: Array<{ tenant: string; card: { description: string } }>;
       };

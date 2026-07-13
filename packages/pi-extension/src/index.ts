@@ -1,5 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { textMessage, type RequestFrame } from "@pi-comm/a2a-contract";
+import { textMessage } from "@pi-comm/a2a-contract";
 import { resolveConfig, type RelayConfig } from "./config.ts";
 import { RelayClient } from "./relay-client.ts";
 import { InboundManager } from "./inbound.ts";
@@ -20,7 +20,6 @@ export default function (pi: ExtensionAPI): void {
   let config: RelayConfig | null = null;
   let client: RelayClient | null = null;
   const mgr = new InboundManager();
-  const jobByReqId = new Map<string, RequestFrame>();
 
   registerA2ATools(pi, () => config, () => client?.tenant ?? null);
 
@@ -47,7 +46,6 @@ export default function (pi: ExtensionAPI): void {
     });
 
     client.onRequest((f) => {
-      jobByReqId.set(f.reqId, f);
       const { promptText } = mgr.begin(f.reqId, f.message, f.stream);
       pi.sendMessage(
         {
@@ -107,7 +105,6 @@ export default function (pi: ExtensionAPI): void {
       true,
     );
     mgr.complete(job.reqId);
-    jobByReqId.delete(job.reqId);
   });
 
   pi.on("session_shutdown", (_e, ctx) => {
