@@ -1,0 +1,10 @@
+{
+  "name": "@pi-comm/pi-extension",
+  "version": "0.0.0",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "pi": { "extensions": ["./src/index.ts"] },
+  "dependencies": { "@pi-comm/a2a-contract": "*", "ws": "^8.18.0" },
+  "peerDependencies": { "@earendil-works/pi-coding-agent": "*" },
+  "devDependencies": { "@types/ws": "^8.5.12" }
+}
