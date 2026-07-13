@@ -1,0 +1,9 @@
+{
+  "name": "@pi-comm/web",
+  "version": "0.0.0",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": { "dev": "vite", "build": "vite build", "preview": "vite preview" },
+  "dependencies": { "react": "^18.3.1", "react-dom": "^18.3.1", "@pi-comm/a2a-contract": "*" },
+  "devDependencies": { "vite": "^5.4.0", "@vitejs/plugin-react": "^4.3.0", "@types/react": "^18.3.0", "@types/react-dom": "^18.3.0" }
+}
