@@ -99,9 +99,15 @@ export default function (pi: ExtensionAPI): void {
       }
     }
 
+    // For streaming jobs the incremental deltas already delivered all content to
+    // the client; sending the full accumulated text again as the final chunk
+    // would cause append-style clients (e.g. the web UI) to render it twice.
+    // For non-streaming jobs no deltas were sent, so the final chunk must carry
+    // the full text.
+    const finalText = job.stream ? "" : text;
     client.sendChunk(
       job.reqId,
-      textMessage("ROLE_AGENT", text, { contextId: job.contextId }),
+      textMessage("ROLE_AGENT", finalText, { contextId: job.contextId }),
       true,
     );
     mgr.complete(job.reqId);
