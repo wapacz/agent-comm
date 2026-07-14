@@ -74,4 +74,38 @@ describe("PtyHost", () => {
 
     host.close();
   });
+
+  it("forces a redraw (row nudge) when resized to the current size", async () => {
+    const { port, socket } = await startStub();
+    const fake = makeFakePty();
+    const spawn: SpawnFn = () => fake.pty;
+    const host = new PtyHost(
+      { wsUrl: `ws://127.0.0.1:${port}`, token: "t", name: "alice", command: "pi", args: [], cwd: "/tmp", env: {} },
+      { spawn },
+    );
+    await host.start();
+    const ws = await socket;
+
+    // First resize differs from the spawn default (80x24) -> single resize, no nudge.
+    ws.send(encodeFrame({ type: "term_resize", cols: 100, rows: 30 }));
+    await new Promise((r) => setTimeout(r, 30));
+    expect(fake.resizes).toEqual([{ cols: 100, rows: 30 }]);
+
+    // Re-attach at the SAME size -> nudge rows (100x29) immediately, then
+    // restore (100x30) after a short delay so the app observes both sizes.
+    ws.send(encodeFrame({ type: "term_resize", cols: 100, rows: 30 }));
+    await new Promise((r) => setTimeout(r, 30));
+    expect(fake.resizes).toEqual([
+      { cols: 100, rows: 30 },
+      { cols: 100, rows: 29 },
+    ]);
+    await new Promise((r) => setTimeout(r, 320));
+    expect(fake.resizes).toEqual([
+      { cols: 100, rows: 30 },
+      { cols: 100, rows: 29 },
+      { cols: 100, rows: 30 },
+    ]);
+
+    host.close();
+  });
 });

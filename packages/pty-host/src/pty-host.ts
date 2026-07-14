@@ -34,6 +34,8 @@ export class PtyHost {
   private closed = false;
   private opts: PtyHostOptions;
   private deps: { spawn?: SpawnFn };
+  private cols = 80;
+  private rows = 24;
 
   constructor(opts: PtyHostOptions, deps: { spawn?: SpawnFn } = {}) {
     this.opts = opts;
@@ -44,10 +46,12 @@ export class PtyHost {
 
   async start(): Promise<void> {
     const spawn = this.deps.spawn ?? (await defaultSpawn());
+    this.cols = this.opts.cols ?? 80;
+    this.rows = this.opts.rows ?? 24;
     this.pty = spawn(this.opts.command, this.opts.args, {
       name: "xterm-256color",
-      cols: this.opts.cols ?? 80,
-      rows: this.opts.rows ?? 24,
+      cols: this.cols,
+      rows: this.rows,
       cwd: this.opts.cwd,
       env: this.opts.env,
     });
@@ -69,11 +73,34 @@ export class PtyHost {
         try { f = parseTunnelFrame(raw.toString()); } catch { return; }
         if (f.type === "term_registered") { this._tenant = f.tenant; this.startHeartbeat(); resolve(); }
         else if (f.type === "term_input") { this.pty?.write(Buffer.from(f.data, "base64").toString("utf8")); }
-        else if (f.type === "term_resize") { try { this.pty?.resize(f.cols, f.rows); } catch { /* ignore */ } }
+        else if (f.type === "term_resize") { this.applyResize(f.cols, f.rows); }
       });
       ws.on("error", (e) => { if (!this._tenant) reject(e); });
       ws.on("close", () => { this.stopHeartbeat(); if (!this.closed) this.scheduleReconnect(); });
     });
+  }
+
+  // Apply a resize to the PTY. When the requested size equals the current one
+  // (e.g. a viewer re-attaching to a TUI already at this size), a plain resize
+  // emits no observable size change, so full-screen apps like pi never repaint
+  // and the new viewer sees a blank screen. Nudge the rows to a different value
+  // and, after a short delay so the app actually observes the intermediate
+  // size, restore the requested size — forcing two SIGWINCH-driven repaints.
+  private applyResize(cols: number, rows: number): void {
+    if (!this.pty) return;
+    const sameSize = cols === this.cols && rows === this.rows;
+    this.cols = cols;
+    this.rows = rows;
+    try {
+      if (sameSize) {
+        const nudge = rows > 1 ? rows - 1 : rows + 1;
+        this.pty.resize(cols, nudge);
+        const t = setTimeout(() => { try { this.pty?.resize(cols, rows); } catch { /* ignore */ } }, 250);
+        (t as { unref?: () => void }).unref?.();
+      } else {
+        this.pty.resize(cols, rows);
+      }
+    } catch { /* ignore */ }
   }
 
   close(): void {
