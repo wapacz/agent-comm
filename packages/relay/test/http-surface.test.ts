@@ -26,7 +26,7 @@ beforeEach(async () => {
       }
     },
   });
-  const handler = createHttpHandler(registry, pending, "secret");
+  const handler = createHttpHandler(registry, pending, "secret", { hasTerminal: (t) => t === "backend" });
   server = createServer(handler);
   await new Promise<void>((r) => server.listen(0, r));
   const addr = server.address();
@@ -49,7 +49,13 @@ describe("http surface", () => {
   it("lists agents", async () => {
     const res = await fetch(`${base}/agents`, { headers: { authorization: "Bearer secret" } });
     const body = await res.json();
-    expect(body.agents).toEqual([{ tenant: "backend", card }]);
+    expect(body.agents).toEqual([{ tenant: "backend", card, terminal: true }]);
+  });
+
+  it("marks tenants that have a terminal", async () => {
+    const res = await fetch(`${base}/agents`, { headers: { authorization: "Bearer secret" } });
+    const body = await res.json();
+    expect(body.agents[0].terminal).toBe(true);
   });
 
   it("serves an agent card", async () => {

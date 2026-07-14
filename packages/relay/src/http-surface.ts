@@ -126,7 +126,7 @@ export function createHttpHandler(
   registry: AgentRegistry,
   pending: PendingRequests,
   token: string,
-  opts?: { requestTimeoutMs?: number },
+  opts?: { requestTimeoutMs?: number; hasTerminal?: (tenant: string) => boolean },
 ) {
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     const url = new URL(req.url ?? "/", "http://localhost");
@@ -141,7 +141,11 @@ export function createHttpHandler(
     if (!checkBearer(req.headers.authorization, token)) return send(res, 401, { error: "unauthorized" });
 
     // GET /agents — list all registered agents
-    if (req.method === "GET" && path === "/agents") return send(res, 200, { agents: registry.list() });
+    if (req.method === "GET" && path === "/agents") {
+      const hasTerminal = opts?.hasTerminal ?? (() => false);
+      const agents = registry.list().map((a) => ({ ...a, terminal: hasTerminal(a.tenant) }));
+      return send(res, 200, { agents });
+    }
 
     // GET /agents/{tenant}/.well-known/agent-card.json
     const cardMatch = /^\/agents\/([^/]+)\/\.well-known\/agent-card\.json$/.exec(path);
