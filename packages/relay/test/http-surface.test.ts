@@ -26,7 +26,7 @@ beforeEach(async () => {
       }
     },
   });
-  const handler = createHttpHandler(registry, pending, "secret", { hasTerminal: (t) => t === "backend" });
+  const handler = createHttpHandler(registry, pending, "secret", { listTerminals: () => [{ tenant: "backend", description: "d" }] });
   server = createServer(handler);
   await new Promise<void>((r) => server.listen(0, r));
   const addr = server.address();
@@ -49,13 +49,18 @@ describe("http surface", () => {
   it("lists agents", async () => {
     const res = await fetch(`${base}/agents`, { headers: { authorization: "Bearer secret" } });
     const body = await res.json();
-    expect(body.agents).toEqual([{ tenant: "backend", card, terminal: true }]);
+    expect(body.agents).toEqual([{ tenant: "backend", card }]);
   });
 
-  it("marks tenants that have a terminal", async () => {
-    const res = await fetch(`${base}/agents`, { headers: { authorization: "Bearer secret" } });
-    const body = await res.json();
-    expect(body.agents[0].terminal).toBe(true);
+  it("lists terminals on GET /terminals", async () => {
+    const res = await fetch(`${base}/terminals`, { headers: { authorization: "Bearer secret" } });
+    expect(res.status).toBe(200);
+    expect((await res.json()).terminals).toEqual([{ tenant: "backend", description: "d" }]);
+  });
+
+  it("rejects GET /terminals without a bearer token", async () => {
+    const res = await fetch(`${base}/terminals`);
+    expect(res.status).toBe(401);
   });
 
   it("serves an agent card", async () => {

@@ -25,4 +25,9 @@ describe("resolvePtyConfig", () => {
   it("throws when the token is missing", () => {
     expect(() => resolvePtyConfig({ ...base, envToken: undefined })).toThrow(/A2A_RELAY_TOKEN/);
   });
+  it("defaults description to the command and honors the flag", () => {
+    expect(resolvePtyConfig(base).description).toBe("pi");
+    expect(resolvePtyConfig({ ...base, command: "bash" }).description).toBe("bash");
+    expect(resolvePtyConfig({ ...base, flagDescription: "my session" }).description).toBe("my session");
+  });
 });

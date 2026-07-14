@@ -28,7 +28,7 @@ export function startTerminalServer(
         tenant = registry.registerLauncher(f.name, {
           sendInput: (data) => { try { ws.send(encodeFrame({ type: "term_input", data })); } catch { /* dropped */ } },
           sendResize: (cols, rows) => { try { ws.send(encodeFrame({ type: "term_resize", cols, rows })); } catch { /* dropped */ } },
-        });
+        }, { description: f.description });
         try { ws.send(encodeFrame({ type: "term_registered", tenant })); } catch { /* closed */ }
         return;
       }

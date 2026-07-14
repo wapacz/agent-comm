@@ -1,17 +1,19 @@
 import { resolvePtyConfig } from "./config.ts";
 import { PtyHost } from "./pty-host.ts";
 
-function parseArgs(argv: string[]): { flagName?: string; command?: string; args?: string[] } {
+function parseArgs(argv: string[]): { flagName?: string; flagDescription?: string; command?: string; args?: string[] } {
   let flagName: string | undefined;
+  let flagDescription: string | undefined;
   const rest: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--name") { flagName = argv[++i]; continue; }
+    if (a === "--description") { flagDescription = argv[++i]; continue; }
     if (a === "--") { rest.push(...argv.slice(i + 1)); break; }
     rest.push(a);
   }
   const [command, ...args] = rest;
-  return { flagName, command, args };
+  return { flagName, flagDescription, command, args };
 }
 
 const parsed = parseArgs(process.argv.slice(2));
@@ -21,6 +23,7 @@ try {
     envRelayUrl: process.env.A2A_RELAY_URL,
     envToken: process.env.A2A_RELAY_TOKEN,
     flagName: parsed.flagName,
+    flagDescription: parsed.flagDescription,
     command: parsed.command,
     args: parsed.args,
     cwd: process.cwd(),
@@ -38,6 +41,7 @@ const host = new PtyHost({
   args: config.args,
   cwd: config.cwd,
   env: process.env as Record<string, string>,
+  description: config.description,
 });
 
 host.start()

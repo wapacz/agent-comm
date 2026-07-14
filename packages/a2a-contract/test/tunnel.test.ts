@@ -30,4 +30,9 @@ describe("tunnel protocol", () => {
     const f = { type: "term_resize", cols: 120, rows: 40 } as const;
     expect(parseTunnelFrame(encodeFrame(f))).toEqual(f);
   });
+
+  it("round-trips a term_register frame with a description", () => {
+    const f = { type: "term_register", token: "t", name: "alice", description: "pi session" } as const;
+    expect(parseTunnelFrame(encodeFrame(f))).toEqual(f);
+  });
 });

@@ -10,7 +10,6 @@ export function App() {
   const [baseUrl, setBaseUrl] = useState(localStorage.getItem("a2a.url") ?? "");
   const [token, setToken] = useState(localStorage.getItem("a2a.token") ?? "");
   const [selected, setSelected] = useState<string | null>(null);
-  const [selectedHasTerminal, setSelectedHasTerminal] = useState(false);
   const client = useMemo(() => new A2AClient({ baseUrl, token }), [baseUrl, token]);
 
   function save() { localStorage.setItem("a2a.url", baseUrl); localStorage.setItem("a2a.token", token); }
@@ -23,13 +22,11 @@ export function App() {
         <button onClick={save}>Save</button>
       </header>
       <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-        <Roster client={client} selected={selected} onSelect={(t, hasTerminal) => { setSelected(t); setSelectedHasTerminal(hasTerminal); }} />
-        {selected && selectedHasTerminal ? (
+        <Roster client={client} selected={selected} onSelect={(t) => setSelected(t)} />
+        {selected ? (
           <Terminal key={`term-${selected}`} baseUrl={baseUrl} token={token} tenant={selected} />
         ) : (
-          <section style={{ flex: 1, display: "grid", placeItems: "center", opacity: 0.6 }}>
-            {selected ? "No terminal available for this agent" : "Select an agent"}
-          </section>
+          <section style={{ flex: 1, display: "grid", placeItems: "center", opacity: 0.6 }}>Select a terminal</section>
         )}
       </div>
     </div>

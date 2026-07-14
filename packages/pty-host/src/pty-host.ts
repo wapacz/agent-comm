@@ -18,7 +18,7 @@ export type SpawnFn = (
 export interface PtyHostOptions {
   wsUrl: string; token: string; name: string;
   command: string; args: string[]; cwd: string; env: Record<string, string>;
-  cols?: number; rows?: number;
+  cols?: number; rows?: number; description?: string;
 }
 
 async function defaultSpawn(): Promise<SpawnFn> {
@@ -67,7 +67,7 @@ export class PtyHost {
     return new Promise((resolve, reject) => {
       const ws = new WebSocket(this.opts.wsUrl);
       this.ws = ws;
-      ws.on("open", () => ws.send(encodeFrame({ type: "term_register", token: this.opts.token, name: this.opts.name })));
+      ws.on("open", () => ws.send(encodeFrame({ type: "term_register", token: this.opts.token, name: this.opts.name, description: this.opts.description })));
       ws.on("message", (raw) => {
         let f;
         try { f = parseTunnelFrame(raw.toString()); } catch { return; }

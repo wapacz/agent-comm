@@ -7,7 +7,7 @@ export interface ChunkFrame { type: "chunk"; reqId: string; message: Message; fi
 export interface ErrorFrame { type: "error"; reqId: string; error: string; }
 export interface PingFrame { type: "ping"; }
 export interface PongFrame { type: "pong"; }
-export interface TermRegisterFrame { type: "term_register"; token: string; name: string; }
+export interface TermRegisterFrame { type: "term_register"; token: string; name: string; description?: string; }
 export interface TermRegisteredFrame { type: "term_registered"; tenant: string; }
 export interface TermDataFrame { type: "term_data"; data: string; }
 export interface TermInputFrame { type: "term_input"; data: string; }

@@ -41,4 +41,13 @@ describe("A2AClient", () => {
     const c = new A2AClient({ baseUrl: "http://r", token: "t" });
     await expect(c.stream("a", "hi", () => {})).rejects.toThrow("stream HTTP 503");
   });
+
+  it("listTerminals GETs /terminals and returns the list", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ terminals: [{ tenant: "alice", description: "pi" }] }) });
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new A2AClient({ baseUrl: "http://r", token: "t" });
+    const list = await client.listTerminals();
+    expect(list).toEqual([{ tenant: "alice", description: "pi" }]);
+    expect(fetchMock).toHaveBeenCalledWith("http://r/terminals", expect.objectContaining({ headers: { authorization: "Bearer t" } }));
+  });
 });
