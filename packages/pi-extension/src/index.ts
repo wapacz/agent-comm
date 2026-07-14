@@ -50,7 +50,13 @@ export default function (pi: ExtensionAPI): void {
       pi.sendMessage(
         {
           customType: "a2a-inbound",
-          content: `[a2a message from relay]\n\n${promptText}`,
+          content:
+            `[Direct message from a user via the A2A relay]\n` +
+            `Reply normally in your assistant response — your reply is automatically ` +
+            `sent back to the sender. Do NOT call a2a_send / agent_send / agent_request ` +
+            `or any tool to forward this or contact other agents unless the user ` +
+            `explicitly asks; that causes agent-to-agent ping-pong loops.\n\n---\n\n` +
+            `${promptText}`,
           display: true,
           details: { reqId: f.reqId },
         },

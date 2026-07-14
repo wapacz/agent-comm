@@ -24,7 +24,7 @@ export function App() {
       </header>
       <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
         <Roster client={client} selected={selected} onSelect={setSelected} />
-        {selected ? <Chat client={client} tenant={selected} /> : <section style={{ flex: 1, display: "grid", placeItems: "center", opacity: 0.6 }}>Select an agent</section>}
+        {selected ? <Chat key={selected} client={client} tenant={selected} /> : <section style={{ flex: 1, display: "grid", placeItems: "center", opacity: 0.6 }}>Select an agent</section>}
         <ToolCallPanel />
       </div>
     </div>
