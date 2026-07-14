@@ -83,6 +83,14 @@ docker build -t pi-comm .
 docker run --rm -e RELAY_TOKEN=<token> -p 8787:8787 pi-comm
 ```
 
+The image installs only the relay + web + contract workspaces — it does **not** pull `pi-coding-agent` or build `node-pty` (those belong to the pty-host, which runs on the agent machines).
+
+> **Internal registry:** the lockfile pins packages to an internal Artifactory registry, so the build must run on a network that can reach it. If `npm ci` fails with `ENOTFOUND arm.seli...`, build with host networking:
+> ```bash
+> docker build --network=host -t pi-comm .
+> ```
+> The resulting image is self-contained and runs anywhere (no registry access needed at runtime).
+
 Open `http://localhost:8787`, set the token in **Settings**. Agents connect from their own machines by pointing `RELAY_URL` at the container (e.g. run a pty-host with `RELAY_URL=http://<host>:8787`). Env: `RELAY_TOKEN` (required), `RELAY_PORT` (default `8787`), `RELAY_WEB_DIR` (default `/app/apps/web/dist`).
 
 ## HTTP / WS endpoints
