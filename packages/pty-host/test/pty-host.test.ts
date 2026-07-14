@@ -108,4 +108,34 @@ describe("PtyHost", () => {
 
     host.close();
   });
+
+  it("sends the description in term_register", async () => {
+    // Use an inline stub that captures the register frame synchronously
+    // before replying, avoiding the socket-promise ordering race.
+    const wss2 = new WebSocketServer({ noServer: true });
+    server = createServer();
+    let registerFrame: { description?: string } | null = null;
+    wss2.on("connection", (ws) => {
+      ws.on("message", (raw) => {
+        const f = parseTunnelFrame(raw.toString());
+        if (f.type === "term_register") {
+          registerFrame = f;
+          ws.send(encodeFrame({ type: "term_registered", tenant: f.name }));
+        }
+      });
+    });
+    server.on("upgrade", (req, sock, head) => wss2.handleUpgrade(req, sock, head, (ws) => wss2.emit("connection", ws, req)));
+    await new Promise<void>((r) => server.listen(0, r));
+    const addr = server.address();
+    const stubPort = typeof addr === "object" && addr ? addr.port : 0;
+
+    const fake = makeFakePty();
+    const host = new PtyHost(
+      { wsUrl: `ws://127.0.0.1:${stubPort}`, token: "t", name: "alice", command: "pi", args: [], cwd: "/tmp", env: {}, description: "pi session" },
+      { spawn: () => fake.pty },
+    );
+    await host.start();
+    expect(registerFrame?.description).toBe("pi session");
+    host.close();
+  });
 });
