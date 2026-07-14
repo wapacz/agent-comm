@@ -12,6 +12,7 @@ export async function startRelay(opts: {
   port: number;
   token: string;
   requestTimeoutMs?: number;
+  webDir?: string;
 }): Promise<{ port: number; close: () => Promise<void> }> {
   const registry = new AgentRegistry();
   const pending = new PendingRequests();
@@ -20,6 +21,7 @@ export async function startRelay(opts: {
   const handler = createHttpHandler(registry, pending, opts.token, {
     requestTimeoutMs,
     listTerminals: () => terminalRegistry.listTerminals(),
+    webDir: opts.webDir,
   });
   const http = createServer(handler);
 

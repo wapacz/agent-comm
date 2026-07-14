@@ -1,10 +1,39 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { join, normalize, extname } from "node:path";
 import { validateMessage, type Message } from "@pi-comm/a2a-contract";
 import type { AgentRegistry } from "./registry.ts";
 import { checkBearer } from "./auth.ts";
 
 export { checkBearer } from "./auth.ts";
+
+const STATIC_MIME: Record<string, string> = {
+  ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".mjs": "text/javascript",
+  ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml",
+  ".ico": "image/x-icon", ".png": "image/png", ".jpg": "image/jpeg", ".woff2": "font/woff2",
+  ".map": "application/json", ".txt": "text/plain",
+};
+
+// Serve a built web app from `webDir` (public, no auth). Unknown paths without a
+// file extension fall back to index.html (single-page app); missing assets 404.
+async function serveStatic(webDir: string, urlPath: string, res: ServerResponse): Promise<void> {
+  const rel = decodeURIComponent(urlPath).replace(/^\/+/, "") || "index.html";
+  const root = normalize(webDir);
+  const candidate = normalize(join(root, rel));
+  if (candidate !== root && !candidate.startsWith(root + "/")) { res.writeHead(403); res.end("forbidden"); return; }
+  let file = candidate;
+  let body: Buffer;
+  try {
+    body = await readFile(candidate);
+  } catch {
+    if (extname(candidate)) { res.writeHead(404); res.end("not found"); return; }
+    file = join(root, "index.html");
+    try { body = await readFile(file); } catch { res.writeHead(404); res.end("not found"); return; }
+  }
+  res.writeHead(200, { "content-type": STATIC_MIME[extname(file).toLowerCase()] ?? "application/octet-stream" });
+  res.end(body);
+}
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 120_000;
 
@@ -126,7 +155,7 @@ export function createHttpHandler(
   registry: AgentRegistry,
   pending: PendingRequests,
   token: string,
-  opts?: { requestTimeoutMs?: number; listTerminals?: () => Array<{ tenant: string; description?: string }> },
+  opts?: { requestTimeoutMs?: number; listTerminals?: () => Array<{ tenant: string; description?: string }>; webDir?: string },
 ) {
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     const url = new URL(req.url ?? "/", "http://localhost");
@@ -137,6 +166,10 @@ export function createHttpHandler(
     res.setHeader("access-control-allow-headers", "authorization,content-type");
     res.setHeader("access-control-allow-methods", "GET,POST,OPTIONS");
     if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
+
+    // Public static web app (when bundled together). API routes stay bearer-gated.
+    const isApiPath = path === "/agents" || path === "/terminals" || path.startsWith("/agents/");
+    if (req.method === "GET" && opts?.webDir && !isApiPath) { return serveStatic(opts.webDir, path, res); }
 
     if (!checkBearer(req.headers.authorization, token)) return send(res, 401, { error: "unauthorized" });
 

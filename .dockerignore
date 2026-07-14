@@ -1,0 +1,11 @@
+node_modules
+**/node_modules
+**/dist
+.git
+.gitignore
+.superpowers
+.pi
+.pi-subagents
+*.log
+Dockerfile
+.dockerignore

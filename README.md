@@ -46,7 +46,7 @@ npm install
 **1. Start the relay**
 
 ```bash
-A2A_RELAY_TOKEN=dev node --experimental-strip-types packages/relay/src/index.ts
+RELAY_TOKEN=dev node --experimental-strip-types packages/relay/src/index.ts
 # → pi-comm relay listening on http://127.0.0.1:8787
 ```
 
@@ -54,7 +54,7 @@ A2A_RELAY_TOKEN=dev node --experimental-strip-types packages/relay/src/index.ts
 
 ```bash
 mkdir -p ~/tmp/agent-a && cd ~/tmp/agent-a
-A2A_RELAY_TOKEN=dev A2A_RELAY_URL=http://127.0.0.1:8787 \
+RELAY_TOKEN=dev RELAY_URL=http://127.0.0.1:8787 \
 node --experimental-strip-types ~/gitrepos/pi-comm/packages/pty-host/src/index.ts \
   --name alice --description "pi session" -- \
   pi -e ~/gitrepos/pi-comm/packages/pi-extension/src/index.ts --a2a-name alice
@@ -72,7 +72,18 @@ node --experimental-strip-types packages/pty-host/src/index.ts --name scratch --
 npm run dev --workspace @pi-comm/web
 ```
 
-Open the printed URL, leave **relay url** blank (dev proxy, same-origin), enter the **token** (`dev`), pick a terminal in the roster.
+Open the printed URL, open **Settings** (gear icon), enter the **token** (`dev`), pick a terminal in the roster.
+
+## Docker (relay + web in one container)
+
+The relay can serve the built web app on its own port (same-origin, no proxy), so a single container runs everything: the web UI, the A2A surface, and the terminal role.
+
+```bash
+docker build -t pi-comm .
+docker run --rm -e RELAY_TOKEN=<token> -p 8787:8787 pi-comm
+```
+
+Open `http://localhost:8787`, set the token in **Settings**. Agents connect from their own machines by pointing `RELAY_URL` at the container (e.g. run a pty-host with `RELAY_URL=http://<host>:8787`). Env: `RELAY_TOKEN` (required), `RELAY_PORT` (default `8787`), `RELAY_WEB_DIR` (default `/app/apps/web/dist`).
 
 ## HTTP / WS endpoints
 
@@ -87,11 +98,11 @@ Open the printed URL, leave **relay url** blank (dev proxy, same-origin), enter 
 | `WS` | `/pty` | pty-host terminal tunnel |
 | `WS` | `/agents/{tenant}/terminal` | browser terminal viewer |
 
-Auth is a static bearer token from `A2A_RELAY_TOKEN`: HTTP clients send `Authorization: Bearer <token>`; browser terminal viewers use the WS subprotocol `["bearer", <token>]`; launchers/extensions send it in their register frame.
+Auth is a static bearer token from `RELAY_TOKEN` (shared by both roles — terminal and A2A): HTTP clients send `Authorization: Bearer <token>`; browser terminal viewers use the WS subprotocol `["bearer", <token>]`; launchers/extensions send it in their register frame. Config env: `RELAY_TOKEN`, `RELAY_URL`, `RELAY_PORT` (the older `A2A_RELAY_*` names still work as fallbacks).
 
 ## Security
 
-> **⚠️ The web terminal is a full interactive remote shell** into the Pi process. Pi has no sandbox — its tools read/write files and run shell commands with the host user's permissions. Keep the relay on `127.0.0.1` (default) unless you understand the exposure, and treat `A2A_RELAY_TOKEN` as a shell credential. Never commit or log the token.
+> **⚠️ The web terminal is a full interactive remote shell** into the Pi process. Pi has no sandbox — its tools read/write files and run shell commands with the host user's permissions. Keep the relay on `127.0.0.1` (default) unless you understand the exposure, and treat `RELAY_TOKEN` as a shell credential. Never commit or log the token.
 
 ## Development
 

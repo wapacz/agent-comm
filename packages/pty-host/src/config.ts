@@ -10,7 +10,7 @@ export function resolvePtyConfig(input: {
 }): PtyHostConfig {
   const relayHttpUrl = (input.envRelayUrl || "http://127.0.0.1:8787").replace(/\/+$/, "");
   const wsUrl = relayHttpUrl.replace(/^http/, "ws") + "/pty";
-  if (!input.envToken) throw new Error("A2A_RELAY_TOKEN not set");
+  if (!input.envToken) throw new Error("RELAY_TOKEN not set");
   const name = input.flagName || basename(input.cwd);
   const command = input.command || "pi";
   return {

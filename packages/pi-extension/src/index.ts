@@ -28,8 +28,8 @@ export default function (pi: ExtensionAPI): void {
       config = resolveConfig({
         flagRelayUrl: pi.getFlag("a2a-relay") as string | undefined,
         flagName: pi.getFlag("a2a-name") as string | undefined,
-        envRelayUrl: process.env["A2A_RELAY_URL"],
-        envToken: process.env["A2A_RELAY_TOKEN"],
+        envRelayUrl: process.env["RELAY_URL"] ?? process.env["A2A_RELAY_URL"],
+        envToken: process.env["RELAY_TOKEN"] ?? process.env["A2A_RELAY_TOKEN"],
         cwd: ctx.cwd,
         model: ctx.model?.id ?? "unknown",
       });

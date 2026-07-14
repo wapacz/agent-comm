@@ -21,7 +21,7 @@ export function resolveConfig(input: {
   const relayHttpUrl = (input.flagRelayUrl || input.envRelayUrl || "http://127.0.0.1:8787").replace(/\/+$/, "");
   const relayWsUrl = relayHttpUrl.replace(/^http/, "ws") + "/agent";
 
-  if (!input.envToken) throw new Error("A2A_RELAY_TOKEN not set");
+  if (!input.envToken) throw new Error("RELAY_TOKEN not set");
 
   const name = input.flagName || input.frontmatter?.name || basename(input.cwd);
   const description = input.frontmatter?.description ?? "Pi agent";

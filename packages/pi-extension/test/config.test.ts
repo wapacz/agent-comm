@@ -21,7 +21,7 @@ describe("resolveConfig", () => {
     expect(resolveConfig({ ...base, frontmatter: { name: "fm" } }).name).toBe("fm");
   });
   it("throws when token is missing", () => {
-    expect(() => resolveConfig({ ...base, envToken: undefined })).toThrow(/A2A_RELAY_TOKEN/);
+    expect(() => resolveConfig({ ...base, envToken: undefined })).toThrow(/RELAY_TOKEN/);
   });
   it("builds a valid card from name + description", () => {
     const c = resolveConfig({ ...base, frontmatter: { description: "does X" } });

@@ -23,7 +23,7 @@ describe("resolvePtyConfig", () => {
     expect(c.args).toEqual(["-e", "x.ts"]);
   });
   it("throws when the token is missing", () => {
-    expect(() => resolvePtyConfig({ ...base, envToken: undefined })).toThrow(/A2A_RELAY_TOKEN/);
+    expect(() => resolvePtyConfig({ ...base, envToken: undefined })).toThrow(/RELAY_TOKEN/);
   });
   it("defaults description to the command and honors the flag", () => {
     expect(resolvePtyConfig(base).description).toBe("pi");

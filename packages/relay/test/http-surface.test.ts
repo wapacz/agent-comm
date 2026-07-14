@@ -196,3 +196,53 @@ describe("PendingRequests — failByTenant", () => {
     await expect(p).rejects.toThrow("agent disconnected");
   });
 });
+
+describe("static web serving (webDir)", () => {
+  let staticServer: Server; let staticBase: string; let webDir: string;
+
+  beforeEach(async () => {
+    const { mkdtemp, writeFile, mkdir } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    webDir = await mkdtemp(join(tmpdir(), "pi-comm-web-"));
+    await writeFile(join(webDir, "index.html"), "<!doctype html><title>app</title>");
+    await mkdir(join(webDir, "assets"));
+    await writeFile(join(webDir, "assets", "app.js"), "console.log(1)");
+    const reg = new AgentRegistry();
+    const handler = createHttpHandler(reg, new PendingRequests(), "secret", { webDir });
+    staticServer = createServer(handler);
+    await new Promise<void>((r) => staticServer.listen(0, r));
+    const addr = staticServer.address();
+    staticBase = `http://127.0.0.1:${typeof addr === "object" && addr ? addr.port : 0}`;
+  });
+  afterEach(async () => { await new Promise<void>((r) => staticServer.close(() => r())); });
+
+  it("serves index.html at / without a token", async () => {
+    const res = await fetch(`${staticBase}/`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/html");
+    expect(await res.text()).toContain("<title>app</title>");
+  });
+
+  it("serves static assets without a token", async () => {
+    const res = await fetch(`${staticBase}/assets/app.js`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("javascript");
+  });
+
+  it("falls back to index.html for unknown routes (no extension)", async () => {
+    const res = await fetch(`${staticBase}/some/deep/route`);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain("<title>app</title>");
+  });
+
+  it("still requires a bearer token for API routes", async () => {
+    expect((await fetch(`${staticBase}/agents`)).status).toBe(401);
+    expect((await fetch(`${staticBase}/terminals`)).status).toBe(401);
+  });
+
+  it("404s a missing asset (does not leak index.html for extensioned paths)", async () => {
+    const res = await fetch(`${staticBase}/assets/missing.js`);
+    expect(res.status).toBe(404);
+  });
+});

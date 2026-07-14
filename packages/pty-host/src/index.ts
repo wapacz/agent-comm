@@ -20,8 +20,8 @@ const parsed = parseArgs(process.argv.slice(2));
 let config;
 try {
   config = resolvePtyConfig({
-    envRelayUrl: process.env.A2A_RELAY_URL,
-    envToken: process.env.A2A_RELAY_TOKEN,
+    envRelayUrl: process.env.RELAY_URL ?? process.env.A2A_RELAY_URL,
+    envToken: process.env.RELAY_TOKEN ?? process.env.A2A_RELAY_TOKEN,
     flagName: parsed.flagName,
     flagDescription: parsed.flagDescription,
     command: parsed.command,
