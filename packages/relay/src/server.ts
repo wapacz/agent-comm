@@ -16,7 +16,11 @@ export async function startRelay(opts: {
   const registry = new AgentRegistry();
   const pending = new PendingRequests();
   const requestTimeoutMs = opts.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
-  const handler = createHttpHandler(registry, pending, opts.token, { requestTimeoutMs });
+  const terminalRegistry = new TerminalRegistry();
+  const handler = createHttpHandler(registry, pending, opts.token, {
+    requestTimeoutMs,
+    hasTerminal: (t) => terminalRegistry.hasTerminal(t),
+  });
   const http = createServer(handler);
 
   const wss = new WebSocketServer({ noServer: true });
@@ -30,7 +34,6 @@ export async function startRelay(opts: {
     },
   });
 
-  const terminalRegistry = new TerminalRegistry();
   const wssPty = new WebSocketServer({ noServer: true });
   const wssViewer = new WebSocketServer({ noServer: true, handleProtocols: () => "bearer" });
   startTerminalServer(wssPty, wssViewer, terminalRegistry, opts.token);
