@@ -7,11 +7,20 @@ export interface ChunkFrame { type: "chunk"; reqId: string; message: Message; fi
 export interface ErrorFrame { type: "error"; reqId: string; error: string; }
 export interface PingFrame { type: "ping"; }
 export interface PongFrame { type: "pong"; }
+export interface TermRegisterFrame { type: "term_register"; token: string; name: string; }
+export interface TermRegisteredFrame { type: "term_registered"; tenant: string; }
+export interface TermDataFrame { type: "term_data"; data: string; }
+export interface TermInputFrame { type: "term_input"; data: string; }
+export interface TermResizeFrame { type: "term_resize"; cols: number; rows: number; }
 
 export type TunnelFrame =
-  | RegisterFrame | RegisteredFrame | RequestFrame | ChunkFrame | ErrorFrame | PingFrame | PongFrame;
+  | RegisterFrame | RegisteredFrame | RequestFrame | ChunkFrame | ErrorFrame | PingFrame | PongFrame
+  | TermRegisterFrame | TermRegisteredFrame | TermDataFrame | TermInputFrame | TermResizeFrame;
 
-const KNOWN = new Set(["register", "registered", "request", "chunk", "error", "ping", "pong"]);
+const KNOWN = new Set([
+  "register", "registered", "request", "chunk", "error", "ping", "pong",
+  "term_register", "term_registered", "term_data", "term_input", "term_resize",
+]);
 
 export function parseTunnelFrame(raw: string): TunnelFrame {
   let obj: unknown;

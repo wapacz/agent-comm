@@ -15,4 +15,19 @@ describe("tunnel protocol", () => {
   it("rejects malformed JSON", () => {
     expect(() => parseTunnelFrame("{not json")).toThrow();
   });
+
+  it("round-trips a term_data frame", () => {
+    const f = { type: "term_data", data: "aGVsbG8=" } as const;
+    expect(parseTunnelFrame(encodeFrame(f))).toEqual(f);
+  });
+
+  it("round-trips a term_register frame", () => {
+    const f = { type: "term_register", token: "t", name: "alice" } as const;
+    expect(parseTunnelFrame(encodeFrame(f))).toEqual(f);
+  });
+
+  it("round-trips a term_resize frame", () => {
+    const f = { type: "term_resize", cols: 120, rows: 40 } as const;
+    expect(parseTunnelFrame(encodeFrame(f))).toEqual(f);
+  });
 });
