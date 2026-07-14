@@ -18,6 +18,7 @@ function bytesToBase64(bytes: Uint8Array): string {
 
 export class TerminalClient {
   private ws: WebSocket | null = null;
+  private pending: string[] = [];
 
   constructor(private opts: { wsBaseUrl: string; token: string; tenant: string }) {}
 
@@ -26,6 +27,7 @@ export class TerminalClient {
     const url = `${base}/agents/${encodeURIComponent(this.opts.tenant)}/terminal`;
     const ws = new WebSocket(url, ["bearer", this.opts.token]);
     this.ws = ws;
+    ws.onopen = () => { for (const m of this.pending) ws.send(m); this.pending = []; };
     ws.onmessage = (ev: MessageEvent) => {
       let f: { type?: string; data?: string };
       try { f = JSON.parse(ev.data as string); } catch { return; }
@@ -34,13 +36,19 @@ export class TerminalClient {
     ws.onclose = () => handlers.onClose();
   }
 
+  private sendRaw(obj: unknown): void {
+    const msg = JSON.stringify(obj);
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) this.ws.send(msg);
+    else this.pending.push(msg);
+  }
+
   sendInput(data: string): void {
     const b64 = bytesToBase64(new TextEncoder().encode(data));
-    this.ws?.send(JSON.stringify({ type: "term_input", data: b64 }));
+    this.sendRaw({ type: "term_input", data: b64 });
   }
 
   sendResize(cols: number, rows: number): void {
-    this.ws?.send(JSON.stringify({ type: "term_resize", cols, rows }));
+    this.sendRaw({ type: "term_resize", cols, rows });
   }
 
   close(): void { this.ws?.close(); }

@@ -4,10 +4,10 @@ export class A2AClient {
   constructor(private opts: { baseUrl: string; token: string }) {}
   private auth() { return { authorization: `Bearer ${this.opts.token}` }; }
 
-  async listAgents(): Promise<Array<{ tenant: string; card: AgentCard }>> {
+  async listAgents(): Promise<Array<{ tenant: string; card: AgentCard; terminal?: boolean }>> {
     const res = await fetch(`${this.opts.baseUrl}/agents`, { headers: this.auth() });
     if (!res.ok) throw new Error(`listAgents HTTP ${res.status}`);
-    return (await res.json() as { agents: Array<{ tenant: string; card: AgentCard }> }).agents;
+    return (await res.json() as { agents: Array<{ tenant: string; card: AgentCard; terminal?: boolean }> }).agents;
   }
 
   async send(tenant: string, text: string): Promise<string> {

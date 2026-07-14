@@ -15,6 +15,7 @@ export default defineConfig({
       "/agents": {
         target: relayTarget,
         changeOrigin: true,
+        ws: true,
         // message:stream is Server-Sent Events; do not buffer it.
         configure: (proxy) => {
           proxy.on("proxyRes", (proxyRes) => {

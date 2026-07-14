@@ -106,3 +106,36 @@ Stop Alice and Bob with `Ctrl-C` in their respective terminals, then stop the re
 Deduplication: if two agents register with the same `--a2a-name`, the second gets `name#2`, etc.
 
 Token auth: every HTTP request and WebSocket registration must carry the `A2A_RELAY_TOKEN` as a Bearer token.
+
+---
+
+## Web terminal (xterm.js) — controlling a remote Pi
+
+> **⚠️ Security:** the web terminal is a *full interactive remote shell* into the Pi
+> process. Pi has no sandbox — its tools read/write files and run shell commands with
+> the host user's permissions. Only run the relay on `127.0.0.1` (default) unless you
+> understand the exposure, and treat `A2A_RELAY_TOKEN` as a shell credential.
+
+### Start the relay (as above), then launch a PTY-host that wraps Pi
+
+```bash
+cd ~/tmp/agent-a
+A2A_RELAY_TOKEN=dev \
+A2A_RELAY_URL=http://127.0.0.1:8787 \
+node --experimental-strip-types ~/gitrepos/pi-comm/packages/pty-host/src/index.ts \
+  --name alice -- \
+  pi -e ~/gitrepos/pi-comm/packages/pi-extension/src/index.ts --a2a-name alice
+```
+
+This runs the real `pi` under a PTY as terminal tenant `alice`, while the inner
+`pi-extension` still exposes the A2A channel under the same name.
+
+### Open the web app and click "Terminal"
+
+Start the web dev server (`npm run dev --workspace @pi-comm/web`), open it, select
+`alice` in the roster, and switch to the **Terminal** tab. You get the full Pi TUI —
+`/new`, `/resume`, skills, tool rendering — driven from the browser. Keystrokes and
+resizes flow to the PTY; ANSI output streams back to `xterm.js`.
+
+Note: the first browser tab to connect is the geometry "primary" (its size drives the
+PTY). Any connected tab can type.

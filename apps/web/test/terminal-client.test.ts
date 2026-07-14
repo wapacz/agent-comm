@@ -1,9 +1,11 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { TerminalClient } from "../src/terminal-client.ts";
 
 class FakeWS {
+  static OPEN = 1;
   static last: FakeWS | null = null;
   url: string; protocols: string[]; sent: string[] = [];
+  readyState = 1;
   onmessage: ((ev: { data: string }) => void) | null = null;
   onclose: (() => void) | null = null;
   onopen: (() => void) | null = null;
@@ -34,5 +36,19 @@ describe("TerminalClient", () => {
     client.sendResize(120, 40);
     expect(JSON.parse(ws.sent[0])).toEqual({ type: "term_input", data: btoa("x") });
     expect(JSON.parse(ws.sent[1])).toEqual({ type: "term_resize", cols: 120, rows: 40 });
+  });
+
+  it("queues sends before OPEN and flushes on open", () => {
+    const client = new TerminalClient({ wsBaseUrl: "ws://relay", token: "tok", tenant: "alice" });
+    client.connect({ onData: () => {}, onClose: () => {} });
+    const ws = FakeWS.last!;
+    // Simulate socket still CONNECTING
+    ws.readyState = 0;
+    client.sendResize(120, 40);
+    expect(ws.sent).toHaveLength(0); // queued, not sent yet
+    ws.readyState = 1;
+    ws.onopen!();
+    expect(ws.sent).toHaveLength(1);
+    expect(JSON.parse(ws.sent[0])).toEqual({ type: "term_resize", cols: 120, rows: 40 });
   });
 });
