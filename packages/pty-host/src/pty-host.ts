@@ -32,8 +32,13 @@ export class PtyHost {
   private _tenant: string | null = null;
   private heartbeat: ReturnType<typeof setInterval> | null = null;
   private closed = false;
+  private opts: PtyHostOptions;
+  private deps: { spawn?: SpawnFn };
 
-  constructor(private opts: PtyHostOptions, private deps: { spawn?: SpawnFn } = {}) {}
+  constructor(opts: PtyHostOptions, deps: { spawn?: SpawnFn } = {}) {
+    this.opts = opts;
+    this.deps = deps;
+  }
 
   get tenant(): string | null { return this._tenant; }
 
