@@ -62,6 +62,16 @@ describe("relay terminal channel", () => {
     await viewerClosed;
   });
 
+  it("exposes a registered launcher on GET /terminals", async () => {
+    relay = await startRelay({ port: 0, token: "t" });
+    const launcher = new WebSocket(`ws://127.0.0.1:${relay.port}/pty`);
+    await waitOpen(launcher);
+    launcher.send(encodeFrame({ type: "term_register", token: "t", name: "alice", description: "pi" }));
+    await new Promise((r) => setTimeout(r, 50));
+    const res = await fetch(`http://127.0.0.1:${relay.port}/terminals`, { headers: { authorization: "Bearer t" } });
+    expect((await res.json()).terminals).toEqual([{ tenant: "alice", description: "pi" }]);
+  });
+
   it("rejects a viewer with a bad bearer token", async () => {
     relay = await startRelay({ port: 0, token: "t" });
     const launcher = new WebSocket(`ws://127.0.0.1:${relay.port}/pty`);

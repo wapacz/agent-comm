@@ -19,7 +19,7 @@ export async function startRelay(opts: {
   const terminalRegistry = new TerminalRegistry();
   const handler = createHttpHandler(registry, pending, opts.token, {
     requestTimeoutMs,
-    hasTerminal: (t) => terminalRegistry.hasTerminal(t),
+    listTerminals: () => terminalRegistry.listTerminals(),
   });
   const http = createServer(handler);
 
