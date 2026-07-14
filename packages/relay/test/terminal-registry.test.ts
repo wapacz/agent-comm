@@ -52,4 +52,14 @@ describe("TerminalRegistry", () => {
     r.removeViewer("alice", v1);
     expect(r.primaryViewer("alice")).toBe(v2);
   });
+
+  it("lists terminals with their descriptions", () => {
+    const r = new TerminalRegistry();
+    r.registerLauncher("alice", launcher(), { description: "pi" });
+    r.registerLauncher("alice", launcher());
+    expect(r.listTerminals()).toEqual([
+      { tenant: "alice", description: "pi" },
+      { tenant: "alice#2", description: undefined },
+    ]);
+  });
 });

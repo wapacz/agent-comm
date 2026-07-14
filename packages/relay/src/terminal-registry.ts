@@ -9,15 +9,17 @@ export interface Viewer {
   close?(): void;
 }
 
+interface LauncherEntry { conn: LauncherConn; description?: string; }
+
 export class TerminalRegistry {
-  private launchers = new Map<string, LauncherConn>();
+  private launchers = new Map<string, LauncherEntry>();
   private viewers = new Map<string, Viewer[]>();
 
-  registerLauncher(name: string, conn: LauncherConn): string {
+  registerLauncher(name: string, conn: LauncherConn, meta?: { description?: string }): string {
     let tenant = name;
     let n = 2;
     while (this.launchers.has(tenant)) tenant = `${name}#${n++}`;
-    this.launchers.set(tenant, conn);
+    this.launchers.set(tenant, { conn, description: meta?.description });
     return tenant;
   }
   unregisterLauncher(tenant: string): Viewer[] {
@@ -26,8 +28,11 @@ export class TerminalRegistry {
     this.viewers.delete(tenant);
     return gone;
   }
-  getLauncher(tenant: string): LauncherConn | undefined { return this.launchers.get(tenant); }
+  getLauncher(tenant: string): LauncherConn | undefined { return this.launchers.get(tenant)?.conn; }
   hasTerminal(tenant: string): boolean { return this.launchers.has(tenant); }
+  listTerminals(): Array<{ tenant: string; description?: string }> {
+    return [...this.launchers.entries()].map(([tenant, e]) => ({ tenant, description: e.description }));
+  }
 
   addViewer(tenant: string, v: Viewer): boolean {
     if (!this.launchers.has(tenant)) return false;
