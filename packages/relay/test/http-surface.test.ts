@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { AgentRegistry } from "../src/registry.ts";
 import { PendingRequests, createHttpHandler, checkBearer } from "../src/http-surface.ts";
 import { createServer, type Server } from "node:http";
@@ -133,5 +133,55 @@ describe("message:stream", () => {
       body: JSON.stringify({ message: { bad: "data" } }),
     });
     expect(res.status).toBe(400);
+  });
+});
+
+describe("PendingRequests — timeout", () => {
+  it("awaitFinal rejects with 'request timeout' when no final arrives within timeoutMs", async () => {
+    const pending = new PendingRequests();
+    const reqId = "req-timeout-1";
+    await expect(pending.awaitFinal(reqId, 20)).rejects.toThrow("request timeout");
+  });
+
+  it("a late push after timeout does NOT throw and has no effect", async () => {
+    const pending = new PendingRequests();
+    const reqId = "req-timeout-2";
+    const p = pending.awaitFinal(reqId, 20);
+    await expect(p).rejects.toThrow("request timeout");
+    // Push after timeout must not throw
+    expect(() => pending.push(reqId, { messageId: "x", role: "ROLE_AGENT", parts: [] }, true)).not.toThrow();
+  });
+
+  it("openStream yields error and throws when timeout fires before first chunk", async () => {
+    const pending = new PendingRequests();
+    const reqId = "req-stream-timeout-1";
+    const stream = pending.openStream(reqId, 20);
+    await expect(async () => { for await (const _ of stream) { /* noop */ } }).rejects.toThrow("request timeout");
+  });
+});
+
+describe("PendingRequests — failByTenant", () => {
+  it("failByTenant rejects an in-flight awaitFinal tracked under that tenant", async () => {
+    const pending = new PendingRequests();
+    const reqId = "req-tenant-1";
+    pending.track(reqId, "myagent");
+    const p = pending.awaitFinal(reqId);
+    pending.failByTenant("myagent", "agent disconnected");
+    await expect(p).rejects.toThrow("agent disconnected");
+  });
+
+  it("failByTenant does nothing for an unknown tenant", () => {
+    const pending = new PendingRequests();
+    expect(() => pending.failByTenant("nobody", "x")).not.toThrow();
+  });
+
+  it("failByTenant errors an in-flight openStream tracked under that tenant", async () => {
+    const pending = new PendingRequests();
+    const reqId = "req-stream-tenant-1";
+    pending.track(reqId, "myagent");
+    const stream = pending.openStream(reqId);
+    const p = (async () => { for await (const _ of stream) { /* noop */ } })();
+    pending.failByTenant("myagent", "agent disconnected");
+    await expect(p).rejects.toThrow("agent disconnected");
   });
 });

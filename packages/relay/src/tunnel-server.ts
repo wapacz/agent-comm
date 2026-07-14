@@ -9,7 +9,10 @@ export function startTunnelServer(
   wss: WebSocketServer,
   registry: AgentRegistry,
   token: string,
-  deps: { onChunk: (tenant: string, f: ChunkFrame | ErrorFrame) => void },
+  deps: {
+    onChunk: (tenant: string, f: ChunkFrame | ErrorFrame) => void;
+    onDisconnect: (tenant: string) => void;
+  },
 ): void {
   wss.on("connection", (ws: WebSocket) => {
     let tenant: string | null = null;
@@ -38,7 +41,17 @@ export function startTunnelServer(
         return;
       }
     });
-    ws.on("close", () => { if (tenant) registry.unregister(tenant); });
-    ws.on("error", () => { if (tenant) registry.unregister(tenant); });
+    ws.on("close", () => {
+      if (tenant) {
+        registry.unregister(tenant);
+        deps.onDisconnect(tenant);
+      }
+    });
+    ws.on("error", () => {
+      if (tenant) {
+        registry.unregister(tenant);
+        deps.onDisconnect(tenant);
+      }
+    });
   });
 }
