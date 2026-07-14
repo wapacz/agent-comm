@@ -1,38 +1,34 @@
 import { useEffect, useRef } from "react";
 import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
-import { WebglAddon } from "@xterm/addon-webgl";
 import { CanvasAddon } from "@xterm/addon-canvas";
 import "@xterm/xterm/css/xterm.css";
 import { TerminalClient } from "../terminal-client.ts";
 
 /**
- * Attach a GPU/canvas renderer instead of xterm's default DOM renderer.
+ * Attach a canvas-based renderer instead of xterm's default DOM renderer.
  *
  * The DOM renderer paints each row as absolutely-positioned DOM elements. On
  * iOS/iPadOS WebKit (which every browser there is forced to use, incl. Chrome),
  * high-frequency partial redraws — pi's spinner + full-width status bars — leave
  * stale composited tiles behind (ghost rectangles / uncleared bands). Rendering
- * to a single <canvas> sidesteps that. Prefer WebGL; fall back to Canvas when
- * WebGL is unavailable or its context is lost (common on iPad WebKit).
+ * to a single <canvas> sidesteps that.
+ *
+ * We use the 2D Canvas addon rather than WebGL: iOS WebKit caps the number of
+ * simultaneously live WebGL contexts and reclaims them lazily. Because the
+ * terminal is fully remounted on every session switch, WebGL contexts pile up
+ * and the cap is hit quickly — the newest terminal then fails to get a context
+ * and renders all-black while the others still work. A 2D canvas context has
+ * no such practical limit, so Canvas is the safe default here; if even that
+ * fails to load, xterm's DOM renderer remains as a last-resort fallback.
  */
 function attachRenderer(term: XTerm): { dispose: () => void } {
   try {
-    const webgl = new WebglAddon();
-    webgl.onContextLoss(() => {
-      webgl.dispose();
-      try { term.loadAddon(new CanvasAddon()); } catch { /* DOM renderer stays */ }
-    });
-    term.loadAddon(webgl);
-    return webgl;
+    const canvas = new CanvasAddon();
+    term.loadAddon(canvas);
+    return canvas;
   } catch {
-    try {
-      const canvas = new CanvasAddon();
-      term.loadAddon(canvas);
-      return canvas;
-    } catch {
-      return { dispose: () => {} };
-    }
+    return { dispose: () => {} };
   }
 }
 
