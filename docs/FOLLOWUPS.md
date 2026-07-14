@@ -20,6 +20,17 @@ Severity/priority from the final whole-branch review.
 
 ## Extension
 
+- **Hard-block agent-to-agent forwarding during an inbound-handling turn (option 2).** Fan-out
+  bug context: when a relay message is injected into an agent that ALSO runs remote-pi
+  (`agent_send`/`agent_request` tools + the agent-network skill), the LLM sometimes forwards
+  the message to peers, so a reply to a web user also pings other agents. Mitigated in
+  `aa74e8d` by rewording the injected prompt to "reply directly, do not forward", but that is
+  advisory only. Deterministic fix if it still happens: in the extension add a `tool_call`
+  hook that, while an inbound job is open (`mgr.oldestOpen()` is truthy), blocks
+  `a2a_send` / `agent_send` / `agent_request` with a reason like "replying to a relay message;
+  forwarding is disabled for this turn". ~10 lines. Alternative: run relay agents in a Pi
+  profile WITHOUT `remote-pi` so the overlapping mesh tools/skill aren't present at all.
+
 - **`agent_end` captures only the LAST assistant message's text per turn** (overwrites on
   each). Benign for single-text chat turns; loses intermediate narration in multi-message
   turns. Consider concatenating or selecting deliberately.
