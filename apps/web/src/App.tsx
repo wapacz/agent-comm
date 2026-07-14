@@ -5,7 +5,10 @@ import { Chat } from "./components/Chat.tsx";
 import { ToolCallPanel } from "./components/ToolCallPanel.tsx";
 
 export function App() {
-  const [baseUrl, setBaseUrl] = useState(localStorage.getItem("a2a.url") ?? "http://127.0.0.1:8787");
+  // Empty base URL = same-origin relative requests, served by the Vite dev
+  // proxy (see vite.config.ts). Leave blank in dev; set an absolute URL only to
+  // hit a relay directly (e.g. a production/remote relay).
+  const [baseUrl, setBaseUrl] = useState(localStorage.getItem("a2a.url") ?? "");
   const [token, setToken] = useState(localStorage.getItem("a2a.token") ?? "");
   const [selected, setSelected] = useState<string | null>(null);
   const client = useMemo(() => new A2AClient({ baseUrl, token }), [baseUrl, token]);
@@ -15,7 +18,7 @@ export function App() {
   return (
     <div style={{ fontFamily: "system-ui", height: "100vh", display: "flex", flexDirection: "column", color: "var(--text, #eee)", background: "var(--layer0, #111)" }}>
       <header style={{ display: "flex", gap: 8, padding: 8, borderBottom: "1px solid var(--border, #333)" }}>
-        <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="relay url" style={{ flex: 1, padding: 6 }} />
+        <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="relay url (blank = use dev proxy)" style={{ flex: 1, padding: 6 }} />
         <input value={token} onChange={(e) => setToken(e.target.value)} placeholder="token" type="password" style={{ width: 160, padding: 6 }} />
         <button onClick={save}>Save</button>
       </header>
