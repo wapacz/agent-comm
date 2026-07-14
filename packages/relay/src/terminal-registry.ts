@@ -6,6 +6,7 @@ export interface LauncherConn {
 export interface Viewer {
   sendData(dataB64: string): void;
   lastResize?: { cols: number; rows: number };
+  close?(): void;
 }
 
 export class TerminalRegistry {
@@ -19,9 +20,11 @@ export class TerminalRegistry {
     this.launchers.set(tenant, conn);
     return tenant;
   }
-  unregisterLauncher(tenant: string): void {
+  unregisterLauncher(tenant: string): Viewer[] {
     this.launchers.delete(tenant);
+    const gone = this.viewers.get(tenant) ?? [];
     this.viewers.delete(tenant);
+    return gone;
   }
   getLauncher(tenant: string): LauncherConn | undefined { return this.launchers.get(tenant); }
   hasTerminal(tenant: string): boolean { return this.launchers.has(tenant); }

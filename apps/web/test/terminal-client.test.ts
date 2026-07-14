@@ -38,6 +38,20 @@ describe("TerminalClient", () => {
     expect(JSON.parse(ws.sent[1])).toEqual({ type: "term_resize", cols: 120, rows: 40 });
   });
 
+  it("converts http:// wsBaseUrl to ws://", () => {
+    const client = new TerminalClient({ wsBaseUrl: "http://relay:8787", token: "tok", tenant: "alice" });
+    client.connect({ onData: () => {}, onClose: () => {} });
+    const ws = FakeWS.last!;
+    expect(ws.url).toMatch(/^ws:\/\/relay:8787\/agents\//  );
+  });
+
+  it("converts https:// wsBaseUrl to wss://", () => {
+    const client = new TerminalClient({ wsBaseUrl: "https://relay", token: "tok", tenant: "alice" });
+    client.connect({ onData: () => {}, onClose: () => {} });
+    const ws = FakeWS.last!;
+    expect(ws.url).toMatch(/^wss:\/\/relay\/agents\//  );
+  });
+
   it("queues sends before OPEN and flushes on open", () => {
     const client = new TerminalClient({ wsBaseUrl: "ws://relay", token: "tok", tenant: "alice" });
     client.connect({ onData: () => {}, onClose: () => {} });

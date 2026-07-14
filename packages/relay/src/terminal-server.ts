@@ -34,7 +34,7 @@ export function startTerminalServer(
       }
       if (f.type === "term_data") { if (tenant) registry.broadcastData(tenant, f.data); return; }
     });
-    const cleanup = () => { if (tenant) registry.unregisterLauncher(tenant); };
+    const cleanup = () => { if (tenant) { const gone = registry.unregisterLauncher(tenant); for (const v of gone) v.close?.(); } };
     ws.on("close", cleanup);
     ws.on("error", cleanup);
   });
@@ -43,7 +43,10 @@ export function startTerminalServer(
   wssViewer.on("connection", (ws: WebSocket, req: IncomingMessage) => {
     const tenant = viewerTenant(req);
     if (!tenant) { ws.close(1011, "bad tenant"); return; }
-    const viewer: Viewer = { sendData: (data) => { try { ws.send(encodeFrame({ type: "term_data", data })); } catch { /* dropped */ } } };
+    const viewer: Viewer = {
+      sendData: (data) => { try { ws.send(encodeFrame({ type: "term_data", data })); } catch { /* dropped */ } },
+      close: () => { try { ws.close(1012, "launcher gone"); } catch { /* already closed */ } },
+    };
     if (!registry.addViewer(tenant, viewer)) { ws.close(1011, "no terminal"); return; }
     ws.on("message", (raw) => {
       let f;

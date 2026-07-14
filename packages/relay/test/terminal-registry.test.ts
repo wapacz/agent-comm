@@ -10,6 +10,19 @@ describe("TerminalRegistry", () => {
     expect(r.registerLauncher("alice", launcher())).toBe("alice#2");
   });
 
+  it("unregisterLauncher returns the viewers that were registered", () => {
+    const r = new TerminalRegistry();
+    const t = r.registerLauncher("alice", launcher());
+    const v1: Viewer = { sendData: () => {} };
+    const v2: Viewer = { sendData: () => {} };
+    r.addViewer(t, v1);
+    r.addViewer(t, v2);
+    const gone = r.unregisterLauncher(t);
+    expect(gone).toHaveLength(2);
+    expect(gone).toContain(v1);
+    expect(gone).toContain(v2);
+  });
+
   it("hasTerminal reflects launcher presence", () => {
     const r = new TerminalRegistry();
     const t = r.registerLauncher("alice", launcher());

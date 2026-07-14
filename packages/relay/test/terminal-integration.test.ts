@@ -45,6 +45,23 @@ describe("relay terminal channel", () => {
     expect(launcherInputs).toEqual(["eA=="]);
   });
 
+  it("closes viewer socket when launcher disconnects", async () => {
+    relay = await startRelay({ port: 0, token: "t" });
+
+    const launcher = new WebSocket(`ws://127.0.0.1:${relay.port}/pty`);
+    await waitOpen(launcher);
+    launcher.send(encodeFrame({ type: "term_register", token: "t", name: "alice" }));
+    await new Promise((r) => setTimeout(r, 50));
+
+    const viewer = new WebSocket(`ws://127.0.0.1:${relay.port}/agents/alice/terminal`, ["bearer", "t"]);
+    await waitOpen(viewer);
+    await new Promise((r) => setTimeout(r, 50));
+
+    const viewerClosed = new Promise<void>((resolve) => viewer.on("close", () => resolve()));
+    launcher.close();
+    await viewerClosed;
+  });
+
   it("rejects a viewer with a bad bearer token", async () => {
     relay = await startRelay({ port: 0, token: "t" });
     const launcher = new WebSocket(`ws://127.0.0.1:${relay.port}/pty`);

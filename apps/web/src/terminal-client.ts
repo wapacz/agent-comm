@@ -23,7 +23,7 @@ export class TerminalClient {
   constructor(private opts: { wsBaseUrl: string; token: string; tenant: string }) {}
 
   connect(handlers: TerminalHandlers): void {
-    const base = this.opts.wsBaseUrl || location.origin.replace(/^http/, "ws");
+    const base = (this.opts.wsBaseUrl || location.origin).replace(/^http/, "ws");
     const url = `${base}/agents/${encodeURIComponent(this.opts.tenant)}/terminal`;
     const ws = new WebSocket(url, ["bearer", this.opts.token]);
     this.ws = ws;
